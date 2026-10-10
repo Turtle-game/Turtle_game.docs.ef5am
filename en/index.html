@@ -1,0 +1,21 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quick start · ElytraF5 API</title><link rel="stylesheet" href="../style.css"></head><body><main class="shell"><article class="frame"><header class="top"><div><div class="brand">ElytraF5 &amp; more · Developer guide</div><strong>Settings API</strong></div><div class="langs"><a href="../fr/index.html">FR</a><a href="index.html">EN</a></div></header><nav class="nav"><a class="active" href="index.html">Quick start</a><a href="reference.html">API reference</a><a href="integration.html">Integration</a><a href="../settings-api.html">Home</a></nav><h1>Contribute settings</h1><p class="lead">This API lets a Fabric client mod add options to the ElytraF5 &amp; more settings screen. Your category, translated labels, optional icon and controls are rendered in the host mod’s visual style, while your mod keeps ownership of the setting values.</p><h2>Before you start</h2><section class="card"><ul><li>ElytraF5 must be installed in the game environment.</li><li>Register settings from a Fabric <code>ClientModInitializer</code>.</li><li>Compile your integration against the ElytraF5 client API.</li><li>Your mod is responsible for storing and persisting its own values.</li></ul></section><h2>Quick start</h2><p>Register one category during client initialization. Minimal toggle example:</p><pre><code>class ExampleClient : ClientModInitializer {
+    private var enabled = true
+
+    override fun onInitializeClient() {
+        ElytraF5SettingsApi.registerCategory(
+            SettingsCategory(
+                id = "examplemod:visuals",
+                title = Component.translatable("examplemod.settings.visuals"),
+                options = listOf(
+                    BooleanSettingOption(
+                        id = "enabled",
+                        title = Component.translatable("examplemod.settings.enabled"),
+                        description = Component.translatable("examplemod.settings.enabled.tooltip"),
+                        currentValue = { enabled },
+                        onChanged = { enabled = it }
+                    )
+                )
+            )
+        )
+    }
+}</code></pre><p>When the player opens ElytraF5 settings, the category is listed in the sidebar. The control reads <code>currentValue()</code> and invokes <code>onChanged</code> after a change.</p><h2>Available controls</h2><div class="grid"><section class="card"><h3>BooleanSettingOption</h3><p>ON/OFF cycle button. The host provides localized ON/OFF labels.</p></section><section class="card"><h3>ChoiceSettingOption</h3><p>Cycles through stable choice IDs and displays your own translatable labels.</p></section><section class="card"><h3>ActionSettingOption</h3><p>Runs an action, such as opening a dedicated configuration screen.</p></section></div><p>Continue with the <a href="reference.html">complete API reference</a> and the <a href="integration.html">Gradle, persistence, translations and screen examples</a>.</p><p class="callout">Register a category once during client startup. Registering the same category ID again throws a validation error.</p><footer><a href="../settings-api.html">Documentation home</a> · API version 1 · <a href="../fr/index.html">Lire en français</a></footer></article></main></body></html>

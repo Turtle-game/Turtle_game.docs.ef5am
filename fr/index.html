@@ -1,0 +1,21 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guide de démarrage · API ElytraF5</title><link rel="stylesheet" href="../style.css"></head><body><main class="shell"><article class="frame"><header class="top"><div><div class="brand">ElytraF5 &amp; more · Guide développeur</div><strong>Settings API</strong></div><div class="langs"><a href="index.html">FR</a><a href="../en/index.html">EN</a></div></header><nav class="nav"><a class="active" href="index.html">Démarrage</a><a href="reference.html">Référence API</a><a href="integration.html">Intégration</a><a href="../settings-api.html">Accueil</a></nav><h1>Ajouter des réglages</h1><p class="lead">Cette API permet à un mod client Fabric de contribuer des options à l’écran de réglages d’ElytraF5 &amp; more. Les composants suivent le thème visuel de l’écran et les valeurs restent contrôlées par votre mod.</p><h2>Avant de commencer</h2><div class="card"><ul><li>Le mod ElytraF5 doit être présent dans l’environnement de jeu.</li><li>Votre intégration s’exécute dans un entrypoint <code>ClientModInitializer</code>.</li><li>Votre code doit être compilé contre l’API client ElytraF5.</li><li>Votre mod reste responsable du stockage et de la persistance des valeurs.</li></ul></div><h2>Démarrage rapide</h2><p>Enregistrez une catégorie pendant l’initialisation cliente. Exemple minimal avec un interrupteur :</p><pre><code>class ExampleClient : ClientModInitializer {
+    private var enabled = true
+
+    override fun onInitializeClient() {
+        ElytraF5SettingsApi.registerCategory(
+            SettingsCategory(
+                id = "examplemod:visuals",
+                title = Component.translatable("examplemod.settings.visuals"),
+                options = listOf(
+                    BooleanSettingOption(
+                        id = "enabled",
+                        title = Component.translatable("examplemod.settings.enabled"),
+                        description = Component.translatable("examplemod.settings.enabled.tooltip"),
+                        currentValue = { enabled },
+                        onChanged = { enabled = it }
+                    )
+                )
+            )
+        )
+    }
+}</code></pre><p>Quand le joueur ouvre ElytraF5, la catégorie apparaît dans la barre latérale. Le contrôle lit <code>currentValue()</code> et appelle <code>onChanged</code> quand sa valeur change.</p><h2>Types de contrôles</h2><div class="grid"><section class="card"><h3>BooleanSettingOption</h3><p>Interrupteur cyclique ON/OFF. Les libellés sont fournis par les traductions d’ElytraF5.</p></section><section class="card"><h3>ChoiceSettingOption</h3><p>Sélecteur cyclique entre des valeurs identifiées, avec le nom d’affichage de votre choix.</p></section><section class="card"><h3>ActionSettingOption</h3><p>Bouton d’action, par exemple pour ouvrir une page de configuration dédiée.</p></section></div><p>Consultez la <a href="reference.html">référence complète des types et contraintes</a>, puis les <a href="integration.html">exemples de stockage, Gradle, traductions et écrans avancés</a>.</p><p class="callout">L’inscription est faite une fois au démarrage client. Ne réenregistrez pas la même catégorie après un changement de monde : les identifiants en double provoquent une erreur de validation.</p><footer><a href="../settings-api.html">Accueil de la documentation</a> · API version 1 · <a href="../en/index.html">Read in English</a></footer></article></main></body></html>
