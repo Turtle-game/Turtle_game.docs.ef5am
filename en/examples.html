@@ -1,0 +1,99 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Complete examples · ElytraF5 API</title><link rel="stylesheet" href="../style.css"></head><body><main class="shell"><article class="frame"><header class="top"><div><div class="brand">ElytraF5 &amp; more · Code recipes</div><strong>Complete examples</strong></div><div class="langs"><a href="../fr/examples.html">FR</a><a href="examples.html">EN</a></div></header><nav class="nav"><a href="index.html">Quick start</a><a href="reference.html">API reference</a><a href="integration.html">Integration</a><a class="active" href="examples.html">Examples</a><a href="faq.html">FAQ</a><a href="../index.html">Home</a></nav><h1>Integration recipes</h1><p class="lead">These snippets show how to combine the API with a mod config, translations and a dedicated settings screen. Replace <code>ExampleConfig</code> and <code>ExampleAdvancedScreen</code> with your project’s own classes.</p><h2>1 · Three options and a custom icon</h2><p>A category containing a toggle, cycle choice, action button and custom icon.</p><pre><code>private fun registerVisualSettings() {
+    ElytraF5SettingsApi.registerCategory(
+        SettingsCategory(
+            id = "examplemod:visuals",
+            title = Component.translatable("examplemod.settings.category.visuals"),
+            icon = Identifier.fromNamespaceAndPath(
+                "examplemod", "textures/gui/settings/visuals.png"
+            ),
+            options = listOf(
+                BooleanSettingOption(
+                    id = "particles",
+                    title = Component.translatable("examplemod.settings.particles"),
+                    description = Component.translatable("examplemod.settings.particles.description"),
+                    currentValue = { ExampleConfig.particles },
+                    onChanged = { value -&gt;
+                        ExampleConfig.particles = value
+                        ExampleConfig.save()
+                    }
+                ),
+                ChoiceSettingOption(
+                    id = "quality",
+                    title = Component.translatable("examplemod.settings.quality"),
+                    description = Component.translatable("examplemod.settings.quality.description"),
+                    choices = listOf(
+                        SettingsChoice("low", Component.translatable("examplemod.quality.low")),
+                        SettingsChoice("balanced", Component.translatable("examplemod.quality.balanced")),
+                        SettingsChoice("high", Component.translatable("examplemod.quality.high"))
+                    ),
+                    currentChoice = { ExampleConfig.quality },
+                    onChanged = { value -&gt;
+                        ExampleConfig.quality = value
+                        ExampleConfig.save()
+                    }
+                ),
+                ActionSettingOption(
+                    id = "advanced",
+                    title = Component.translatable("examplemod.settings.advanced"),
+                    description = Component.translatable("examplemod.settings.advanced.description"),
+                    buttonTitle = Component.translatable("examplemod.settings.open_advanced"),
+                    action = { parent -&gt;
+                        Minecraft.getInstance().gui.setScreen(ExampleAdvancedScreen(parent))
+                    }
+                )
+            )
+        )
+    )
+}</code></pre><p>Imports for this snippet: <code>net.minecraft.network.chat.Component</code>, <code>net.minecraft.resources.Identifier</code>, <code>net.minecraft.client.Minecraft</code> and <code>net.turtle.ef5am.api.client.settings.*</code>.</p><h2>Java example: a boolean setting</h2><p>The API is written in Kotlin. Java callbacks use Kotlin’s <code>Function0</code> and <code>Function1</code> interfaces. A change callback returns <code>Unit.INSTANCE</code>.</p><pre><code>import java.util.List;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
+import net.minecraft.network.chat.Component;
+import net.turtle.ef5am.api.client.settings.*;
+
+ElytraF5SettingsApi.registerCategory(new SettingsCategory(
+    "examplemod:visuals",
+    Component.translatable("examplemod.settings.category.visuals"),
+    List.of(new BooleanSettingOption(
+        "particles",
+        Component.translatable("examplemod.settings.particles"),
+        Component.translatable("examplemod.settings.particles.description"),
+        (Function0&lt;Boolean&gt;) () -&gt; ExampleConfig.isParticlesEnabled(),
+        (Function1&lt;Boolean, Unit&gt;) value -&gt; {
+            ExampleConfig.setParticlesEnabled(value);
+            ExampleConfig.save();
+            return Unit.INSTANCE;
+        }
+    )),
+    null
+));</code></pre><p>Compile with ElytraF5’s development jar and Kotlin libraries. The Kotlin API is most concise from Kotlin; Java integrations should verify generated signatures against the exact API version they target.</p><h2>2 · Fabric client entrypoint</h2><pre><code>class ExampleModClient : ClientModInitializer {
+    override fun onInitializeClient() {
+        ExampleConfig.load()
+        registerVisualSettings()
+    }
+}</code></pre><p>Load your config before registration: ElytraF5 reads the value provider when the screen is built. Avoid disk I/O inside UI callbacks.</p><h2>3 · Add translations</h2><p>Create <code>src/client/resources/assets/examplemod/lang/en_us.json</code> and <code>fr_fr.json</code> (or the resource path configured by your project):</p><pre><code>{
+  "examplemod.settings.category.visuals": "Visuals",
+  "examplemod.settings.particles": "Particles",
+  "examplemod.settings.particles.description": "Shows custom particle effects.",
+  "examplemod.settings.quality": "Quality",
+  "examplemod.settings.quality.description": "Selects the detail level.",
+  "examplemod.quality.low": "Low",
+  "examplemod.quality.balanced": "Balanced",
+  "examplemod.quality.high": "High",
+  "examplemod.settings.advanced": "Advanced options",
+  "examplemod.settings.advanced.description": "Opens advanced controls.",
+  "examplemod.settings.open_advanced": "Configure"
+}</code></pre><p>Translation keys belong to your mod’s namespace. They are not added to ElytraF5’s language files.</p><h2>4 · Child screen with a back path</h2><pre><code>class ExampleAdvancedScreen(private val parent: Screen) :
+    Screen(Component.translatable("examplemod.settings.advanced.title")) {
+
+    override fun onClose() {
+        Minecraft.getInstance().gui.setScreen(parent)
+    }
+}</code></pre><p>The supplied parent is the currently open ElytraF5 screen. Do not create a fresh settings screen when closing; restore the parent instance.</p><h2>5 · Optional integration</h2><p>If ElytraF5 is optional, declare it under <code>suggests</code> and check that it is loaded before running the integration bridge. Keep all ElytraF5 class references in a separate bridge class that is only called when the mod is present.</p><pre><code>override fun onInitializeClient() {
+    ExampleConfig.load()
+    if (FabricLoader.getInstance().isModLoaded("ef5am")) {
+        ExampleElytraF5Bridge.register()
+    }
+}</code></pre><p>If the dependency is required, declare it under <code>depends</code>. Never import the client API into shared server code.</p><h2>6 · Callback behavior</h2><ul><li><code>currentValue</code> and <code>currentChoice</code> provide state when controls are created.</li><li><code>onChanged</code> receives the newly selected value. Update your source of truth and persist it according to your config strategy.</li><li>Controls do not continuously poll your values. If config changes elsewhere while the screen is open, close and reopen the screen to rebuild controls.</li><li>Avoid expensive work, network access or resource loading in UI callbacks.</li></ul><p class="callout">The API provides simple controls. It does not provide automatic persistence, sliders, nested categories or access to another mod’s settings.</p><footer><a href="index.html">Quick start</a> · <a href="../fr/examples.html">Lire ces exemples en français</a></footer></article></main></body></html>
+
+

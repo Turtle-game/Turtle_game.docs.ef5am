@@ -1,0 +1,101 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exemples complets · API ElytraF5</title><link rel="stylesheet" href="../style.css"></head><body><main class="shell"><article class="frame"><header class="top"><div><div class="brand">ElytraF5 &amp; more · Cookbook</div><strong>Exemples complets</strong></div><div class="langs"><a href="examples.html">FR</a><a href="../en/examples.html">EN</a></div></header><nav class="nav"><a href="index.html">Démarrage</a><a href="reference.html">Référence API</a><a href="integration.html">Intégration</a><a class="active" href="examples.html">Exemples</a><a href="faq.html">FAQ</a><a href="../index.html">Accueil</a></nav><h1>Recettes d’intégration</h1><p class="lead">Ces exemples montrent le chemin complet : définir les options, les enregistrer côté client, persister leur valeur, fournir les traductions et ajouter une icône.</p><h2>Exemple Kotlin : une catégorie entière</h2><p>Le code ci-dessous suppose un objet de configuration propre au mod. Remplacez <code>ExampleConfig</code> par votre système JSON, TOML ou autre.</p><pre><code>package example.mod
+
+import net.fabricmc.api.ClientModInitializer
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
+import net.turtle.ef5am.api.client.settings.*
+
+class ExampleClient : ClientModInitializer {
+    override fun onInitializeClient() {
+        ElytraF5SettingsApi.registerCategory(
+            SettingsCategory(
+                id = "examplemod:visuals",
+                title = Component.translatable("examplemod.settings.category.visuals"),
+                icon = Identifier.fromNamespaceAndPath(
+                    "examplemod", "textures/gui/settings/visuals.png"
+                ),
+                options = listOf(
+                    BooleanSettingOption(
+                        id = "particles",
+                        title = Component.translatable("examplemod.settings.particles"),
+                        description = Component.translatable("examplemod.settings.particles.hint"),
+                        currentValue = { ExampleConfig.particles },
+                        onChanged = { value -&gt;
+                            ExampleConfig.particles = value
+                            ExampleConfig.save()
+                        }
+                    ),
+                    ChoiceSettingOption(
+                        id = "quality",
+                        title = Component.translatable("examplemod.settings.quality"),
+                        description = Component.translatable("examplemod.settings.quality.hint"),
+                        choices = listOf(
+                            SettingsChoice("fast", Component.translatable("examplemod.quality.fast")),
+                            SettingsChoice("balanced", Component.translatable("examplemod.quality.balanced")),
+                            SettingsChoice("fancy", Component.translatable("examplemod.quality.fancy"))
+                        ),
+                        currentChoice = { ExampleConfig.quality },
+                        onChanged = { value -&gt;
+                            ExampleConfig.quality = value
+                            ExampleConfig.save()
+                        }
+                    ),
+                    ActionSettingOption(
+                        id = "advanced",
+                        title = Component.translatable("examplemod.settings.advanced"),
+                        description = Component.translatable("examplemod.settings.advanced.hint"),
+                        buttonTitle = Component.translatable("examplemod.settings.open"),
+                        action = { parent -&gt;
+                            Minecraft.getInstance().gui.setScreen(ExampleAdvancedScreen(parent))
+                        }
+                    )
+                )
+            )
+        )
+    }
+}</code></pre><p>Ajoutez l’import <code>net.minecraft.client.Minecraft</code> pour l’exemple d’action. Le callback reçoit l’écran de réglages en parent ; l’écran avancé doit le restaurer quand il se ferme.</p><h2>Exemple Java : option booléenne</h2><p>L’API est écrite en Kotlin. En Java, ses callbacks utilisent les interfaces Kotlin <code>Function0</code> et <code>Function1</code>. Le callback de changement renvoie <code>Unit.INSTANCE</code>.</p><pre><code>import java.util.List;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
+import net.minecraft.network.chat.Component;
+import net.turtle.ef5am.api.client.settings.*;
+
+ElytraF5SettingsApi.registerCategory(new SettingsCategory(
+    "examplemod:visuals",
+    Component.translatable("examplemod.settings.category.visuals"),
+    List.of(new BooleanSettingOption(
+        "particles",
+        Component.translatable("examplemod.settings.particles"),
+        Component.translatable("examplemod.settings.particles.hint"),
+        (Function0&lt;Boolean&gt;) () -&gt; ExampleConfig.isParticlesEnabled(),
+        (Function1&lt;Boolean, Unit&gt;) value -&gt; {
+            ExampleConfig.setParticlesEnabled(value);
+            ExampleConfig.save();
+            return Unit.INSTANCE;
+        }
+    )),
+    null
+));</code></pre><p>Java doit compiler avec le jar ElytraF5 et la bibliothèque Kotlin disponibles. Pour une intégration Java, vérifiez les signatures générées par la version d’API ciblée.</p><h2>Fichiers de ressources attendus</h2><pre><code>src/main/resources/
+└── assets/
+    └── examplemod/
+        ├── lang/
+        │   ├── en_us.json
+        │   └── fr_fr.json
+        └── textures/
+            └── gui/
+                └── settings/
+                    └── visuals.png  # 16 × 16 pixels</code></pre><h2>Exemple de traductions</h2><pre><code>// fr_fr.json
+{
+  "examplemod.settings.category.visuals": "Visuels",
+  "examplemod.settings.particles": "Particules",
+  "examplemod.settings.particles.hint": "Affiche les particules décoratives.",
+  "examplemod.settings.quality": "Qualité",
+  "examplemod.settings.quality.hint": "Choisit le niveau de qualité des effets.",
+  "examplemod.quality.fast": "Rapide",
+  "examplemod.quality.balanced": "Équilibrée",
+  "examplemod.quality.fancy": "Élevée",
+  "examplemod.settings.advanced": "Options avancées",
+  "examplemod.settings.advanced.hint": "Ouvre les options détaillées.",
+  "examplemod.settings.open": "Configurer"
+}</code></pre><p>Le même jeu de clés doit apparaître dans <code>en_us.json</code> avec des textes anglais. Si une clé n’existe pas, Minecraft affiche généralement son identifiant brut.</p><h2>Choisir un type d’option</h2><table><tr><th>Besoin</th><th>Type recommandé</th><th>Exemple</th></tr><tr><td>Activer / désactiver une fonction</td><td><code>BooleanSettingOption</code></td><td>Particules, overlay, sons</td></tr><tr><td>Choisir une valeur parmi quelques modes nommés</td><td><code>ChoiceSettingOption</code></td><td>Qualité, mode, position</td></tr><tr><td>Ouvrir un écran plus riche ou déclencher une action</td><td><code>ActionSettingOption</code></td><td>Liste de filtres, éditeur, sous-menu</td></tr></table><h2>À retenir</h2><ul><li>Les callbacks de l’API ne sauvegardent rien automatiquement : appelez votre mécanisme de sauvegarde.</li><li>Fournissez une valeur initiale valide avant d’enregistrer une option à choix.</li><li>Utilisez des clés de traduction dans tous les <code>Component</code> destinés au joueur.</li><li>Les icônes sont facultatives ; vérifiez l’ID de ressource, le namespace et les dimensions.</li></ul><footer><a href="index.html">Démarrage</a> · <a href="../en/examples.html">Read this page in English</a></footer></article></main></body></html>
+
